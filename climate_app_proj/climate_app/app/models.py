@@ -1,7 +1,7 @@
-from app import db
+from climate_app.__init__ import db
 
 # db.reflect()
-#
+
 
 class Measurement(db.Model):
     __tablename__ = 'measurement'

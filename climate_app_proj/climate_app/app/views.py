@@ -1,10 +1,11 @@
 from ..app import app
+from .models import Measurement, Station
 
 
 @app.route('precipitation')
 def precipitation():
-    # r = Measurement.query.filter(Measurement.date >= '2017-07-08').first()
-    return "HELlo"
+    r = Measurement.query.filter(Measurement.date >= '2017-07-08').first()
+    return r
 
 
 @app.route('stations')
