@@ -40,6 +40,16 @@ def valid_date(date):
         return False
 
 
+@app.route('/')
+def welcome():
+    manual = ['/api/v1.0/precipitation',
+              '/api/v1.0/stations',
+              '/api/v1.0/tobs',
+              '/api/v1.0/<start>',
+              '/api/v1.0/<start>/<end>']
+    return jsonify(manual)
+    
+    
 @app.route('/api/v1.0/precipitation')
 def precipitation():
     last_date_on_db = session.query(*[measurement.date]).order_by(measurement.date.desc()).first()[0]
