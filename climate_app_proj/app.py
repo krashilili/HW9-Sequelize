@@ -32,6 +32,13 @@ app = Flask(__name__)
 # Flask Routes
 #################################################
 
+def valid_date(date):
+    try:
+        datetime.datetime.strptime(date, '%Y-%m-%d')
+        return True
+    except (ValueError, TypeError):
+        return False
+
 
 @app.route('/api/v1.0/precipitation')
 def precipitation():
@@ -65,12 +72,49 @@ def tobs():
     return jsonify_tobs
 
 
-@app.route('/api/v1.0/<start>')
+@app.route('/api/v1.0/<start>',defaults={'end': None})
 @app.route('/api/v1.0/<start>/<end>')
 def temp_in_range(start, end):
-    if start and not end:
+    last_date_on_db = session.query(*[measurement.date]).order_by(measurement.date.desc()).first()[0]
+    first_date_on_db = session.query(*[measurement.date]).order_by(measurement.date.asc()).first()[0]
 
-    return 'Hello World!'
+    tobs = None
+    # check if the start and end dates are in valid format
+    if valid_date(start) and valid_date(end) and start > end:
+        return "Error. Start date is greater than end date."
+
+    # Start date shall be less than or equal to the last date in sqlite db.
+    if valid_date(start) and start > last_date_on_db:
+        return "Error. Start date exceeds the last date on sqlite db."
+
+    # End date shall be greater than or equal to the first date in sqlite db.
+    if valid_date(end) and end < first_date_on_db:
+        return "Error. End date is before the first date on sqlite db."
+
+    if valid_date(start) and not end:
+        # Given a start_date only
+        tobs = session.query(measurement.date,
+                             func.min(measurement.tobs),
+                             func.avg(measurement.tobs),
+                             func.max(measurement.tobs)).filter(measurement.date >= start)\
+                                                        .group_by(measurement.date).all()
+
+    elif valid_date(start) and valid_date(end):
+        tobs = session.query(measurement.date,
+                             func.min(measurement.tobs),
+                             func.avg(measurement.tobs),
+                             func.max(measurement.tobs)).filter(measurement.date >= start).\
+                                                         filter(measurement.date <= end).\
+                                                         group_by(measurement.date).all()
+    else:
+        return "The date is not valid. Please use the right format: YYYY-MM-DD."
+
+    results = [{'date': r[0],
+                'TMin': r[1],
+                'TAvg': r[2],
+                'TMax': r[3]} for r in tobs]
+
+    return jsonify(results)
 
 
 if __name__ == '__main__':
